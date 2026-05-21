@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport"
+            content="width=device-width, initial-scale=1.0, user-scalable=no" />
+        <title>ISM-FINAL-2026 | Secure Exam with Supabase</title>
+        <!-- SheetJS for Excel export (local fallback) -->
+        <script
+            src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+        <!-- Screenshot Prevention Library -->
+        <script
+            src="https://cdn.jsdelivr.net/npm/screenshot-prevention@latest/dist/screenshot-prevention.min.js"></script>
+        <!-- Supabase JS client -->
+        <script
+            src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+        <style>
+        /* disable text selection globally */
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+        input, select, textarea {
+            user-select: text;
+            -webkit-user-select: text;
+        }
+        :root { font-family: 'Segoe UI', Arial, Helvetica, sans-serif; color: #0f172a; }
+        body { background: #f1f5f9; margin: 0; padding: 20px; line-height: 1.45; }
+        .wrap { max-width: 1200px; margin: 0 auto; position: relative; z-index: 1; }
+        header { display: flex; align-items: center; gap: 16px; background: #fff; padding: 14px 20px; border-radius: 16px; box-shadow: 0 6px 14px rgba(0,0,0,0.03); flex-wrap: wrap; }
+        header h1 { font-size: 1.15rem; margin: 0; font-weight: 700; letter-spacing: -0.2px; }
+        .timer { margin-left: auto; background: #fff2f0; color: #b91c1c; padding: 6px 16px; border-radius: 40px; font-weight: 700; font-family: monospace; font-size: 1.2rem; box-shadow: inset 0 0 0 1px rgba(185,28,28,0.2); }
+        .card { background: #fff; padding: 20px; margin-top: 20px; border-radius: 20px; box-shadow: 0 12px 30px rgba(0,0,0,0.05); }
+        label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 0.9rem; }
+        .meta { color: #4b5563; margin-bottom: 14px; font-size: 0.85rem; border-left: 3px solid #2563eb; padding-left: 12px; background: #f8fafc; border-radius: 8px; }
+        select, input[type="text"] { width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid #e2e8f0; background: #fff; font-size: 0.9rem; transition: 0.1s; margin-bottom: 12px; }
+        select:focus, input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.2); }
+        button { background: #1f2937; color: white; padding: 10px 18px; border-radius: 40px; border: none; font-weight: 600; cursor: pointer; transition: 0.1s; font-size: 0.85rem; margin-right: 8px; margin-bottom: 6px; }
+        .muted { color: #6c757d; font-size: 0.8rem; }
+        .question { padding: 16px; border-radius: 16px; border: 1px solid #eef2f6; margin-bottom: 16px; background: #ffffff; }
+        .qcase { font-weight: 700; margin-bottom: 12px; font-size: 0.9rem; color: #075985; display: flex; align-items: center; gap: 6px; }
+        .badge-part { background: #e0f2fe; color: #0369a1; border-radius: 30px; padding: 2px 10px; font-size: 0.7rem; font-weight: 600; margin-left: 8px; }
+        #submitMsg { display: none; margin-top: 18px; padding: 12px; border-radius: 14px; background: #ecfdf5; color: #065f46; font-weight: 500; border-left: 4px solid #10b981; }
+        .deadline-badge { background: #fef9c3; border-radius: 30px; padding: 4px 12px; font-size: 0.7rem; font-weight: 600; color: #854d0e; }
+        .cheat-warning { background: #fee2e2; color: #991b1b; padding: 8px; border-radius: 12px; text-align: center; margin-bottom: 12px; font-weight: bold; display: none; }
+        .exam-watermark {
+            position: fixed;
+            bottom: 15px;
+            right: 15px;
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(4px);
+            color: rgba(255,255,200,0.85);
+            font-size: 11px;
+            padding: 6px 12px;
+            border-radius: 30px;
+            font-family: monospace;
+            letter-spacing: 0.5px;
+            pointer-events: none;
+            z-index: 9999;
+            border-left: 3px solid #ffcc00;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            font-weight: 500;
+            transition: opacity 0.2s;
+            opacity: 0;
+        }
+        .exam-watermark.active { opacity: 1; }
+        .screenshot-warning-toast {
+            position: fixed;
+            top: 20%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #b91c1c;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 40px;
+            font-weight: bold;
+            z-index: 10001;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            animation: fadeOut 2s ease forwards;
+            pointer-events: none;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+        @keyframes fadeOut {
+            0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            70% { opacity: 1; }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(0.95); visibility: hidden; }
+        }
+        .export-area { margin-top: 20px; padding-top: 16px; border-top: 1px solid #e2e8f0; text-align: right; }
+        .export-btn { background: #2c3e50; }
+        @media (max-width: 700px) { header h1 { font-size: 0.9rem; } .timer { font-size: 1rem; } .exam-watermark { font-size: 9px; bottom: 8px; right: 8px; } }
+    </style>
+    </head>
+    <body>
+        <div class="wrap">
+            <header>
+                <h1>ISM-FINAL-2026<br><span
+                        style="font-size:0.75rem; font-weight:normal;"></span></h1>
+                <div class="deadline-badge">📅 Start: May 21, 2026 9:00 AM |
+                    Deadline: May 21, 2026 10:00 AM</div>
+                <div class="timer" id="timer">--:--</div>
+            </header>
+
+            <!-- Access code panel -->
+            <div class="card" id="accessCodeSection">
+                <label>🔐 Exam Access Code</label>
+                <input id="examCodeInput" type="text"
+                    placeholder="Enter exam access key" />
+                <div
+                    style="display:flex; gap:10px; align-items:center; margin-top:8px;">
+                    <button id="examCodeBtn">Start Cybersecurity Exam</button>
+                </div>
+                <p id="codeError" class="muted"
+                    style="color:#b91c1c; display:none; margin-top:8px;"></p>
+            </div>
+
+            <!-- Exam form -->
+            <form id="examForm" class="card" autocomplete="off"
+                style="display:none">
+                <div class="cheat-warning" id="cheatWarning">⚠️ Exam integrity
+                    violation detected. Page will reload.</div>
+                <label>📛 Student Name (Last, First)</label>
+                <input id="studentName" type="text"
+                    placeholder="e.g., Rodriguez, Ana" />
+                <div class="meta">ISM-FINAL-2026 | Anti-screenshot & Supabase
+                    cloud saving</div>
+                <div id="questions"></div>
+                <div
+                    style="display:flex; gap:12px; align-items:center; margin-top:8px; flex-wrap:wrap; justify-content: space-between;">
+                    <button type="submit" id="submitBtn">✅ Submit Exam</button>
+                    <div class="muted">Results are saved to the cloud
+                        automatically.</div>
+                </div>
+                <div id="submitMsg"></div>
+                <div class="export-area">
+                    <hr />
+                    <button type="button" id="simpleExportBtn"
+                        class="export-btn">📥 Export Local Records
+                        (Excel)</button>
+                    <span class="muted" id="submissionsCounter">(No submissions
+                        yet)</span>
+                    <p class="muted" style="margin-top:6px;">Instructor: use
+                        Supabase dashboard to export all cloud records.</p>
+                </div>
+            </form>
+        </div>
+
+        <div id="examWatermark" class="exam-watermark">🔒 SECURE EXAM • SESSION
+            ID: <span id="watermarkSessionId">------</span> • NOT FOR
+            DISTRIBUTION</div>
+
+        <script>
+(function(){
+    // ---------- FIXED EXAM TIMES ----------
+    const FIXED_START = new Date(2026, 4, 21, 9, 0, 0);
+    const FIXED_DEADLINE = new Date(2026, 4, 21, 10, 0, 0);
+    const ACCESS_CODE = "kuwangking-kangkong-2026";
+    const DURATION_MINUTES = 60;
+    const MASTER_EXPORT_PASSWORD = "CYBER_RESPONSE";
+    const SUBMISSIONS_KEY = "CyberExamMasterSubmissions";
+
+    // ---------- SUPABASE CONFIGURATION ----------
+    // 🔁 REPLACE 'YOUR_SUPABASE_ANON_KEY' WITH YOUR ACTUAL ANON KEY FROM SUPABASE
+    const SUPABASE_URL = 'https://akecyycluozdccstxjze.supabase.co';
+    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';   // <-- PASTE YOUR ANON KEY HERE
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // DOM elements
+    const accessSection = document.getElementById('accessCodeSection');
+    const examForm = document.getElementById('examForm');
+    const examCodeInput = document.getElementById('examCodeInput');
+    const examCodeBtn = document.getElementById('examCodeBtn');
+    const codeError = document.getElementById('codeError');
+    const timerEl = document.getElementById('timer');
+    const questionsContainer = document.getElementById('questions');
+    const watermarkDiv = document.getElementById('examWatermark');
+    const watermarkSessionSpan = document.getElementById('watermarkSessionId');
+    const simpleExportBtn = document.getElementById('simpleExportBtn');
+    const submissionsCounterSpan = document.getElementById('submissionsCounter');
+
+    // Exam state
+    let examStarted = false;
+    let timerInterval = null;
+    let totalSecondsRemaining = 0;
+    let currentCorrectAnswers = [];
+    let studentSubmissionRecorded = false;
+    let screenshotPreventionInstance = null;
+
+    // ---------- LocalStorage helpers (fallback + export) ----------
+    function loadAllSubmissions() { 
+        const s = localStorage.getItem(SUBMISSIONS_KEY); 
+        return s ? JSON.parse(s) : []; 
+    }
+    function saveAllSubmissions(sub) { 
+        localStorage.setItem(SUBMISSIONS_KEY, JSON.stringify(sub)); 
+        updateSubmissionCounter(); 
+    }
+    function updateSubmissionCounter() { 
+        const cnt = loadAllSubmissions().length; 
+        if(submissionsCounterSpan) submissionsCounterSpan.textContent = `📋 ${cnt} local record(s) stored`;
+    }
+    function addLocalSubmissionRecord(studentName, rawScore, total, percent, passed) {
+        const subs = loadAllSubmissions();
+        subs.push({ studentName, rawScore, totalQuestions: total, percent, passed, timestamp: new Date().toLocaleString() });
+        saveAllSubmissions(subs);
+    }
+
+    // ---------- Supabase save function ----------
+    async function saveToSupabase(studentName, rawScore, total, percent, passed) {
+        try {
+            const { error } = await supabase
+                .from('exam_results')
+                .insert([{
+                    student_name: studentName,
+                    raw_score: rawScore,
+                    total_questions: total,
+                    percentage: percent,
+                    result: passed ? 'PASS' : 'FAIL'
+                }]);
+            if (error) {
+                console.error('❌ Supabase insert error:', error);
+                // Optionally inform user but don't block submission
+            } else {
+                console.log('✅ Exam result saved to Supabase cloud!');
+            }
+        } catch(err) {
+            console.error('Supabase connection error:', err);
+        }
+    }
+
+    // ---------- Anti-cheat & watermark ----------
+    function generateWatermarkSessionId() {
+        const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
+        const timePart = Date.now().toString(36).slice(-4);
+        return `ISM-${randomPart}${timePart}`;
+    }
+    function enableExamProtectionFeatures() {
+        if (screenshotPreventionInstance) {
+            try { screenshotPreventionInstance.destroy(); } catch(e) {}
+        }
+        if (typeof ScreenshotPrevention !== 'undefined') {
+            screenshotPreventionInstance = new ScreenshotPrevention({
+                blurIntensity: '8px',
+                warningMessage: '📸 Screenshot/recording attempt detected.',
+                preventCopy: true,
+                preventInspect: false,
+                onAttempt: (details) => {
+                    showScreenshotToast();
+                    console.warn("[SECURITY] Screenshot/recording attempt:", details);
+                    const warnDiv = document.getElementById('cheatWarning');
+                    if (warnDiv && warnDiv.style.display !== 'block') {
+                        warnDiv.style.display = 'block';
+                        warnDiv.innerText = '⚠️ Screenshot or recording attempt registered. Repeated attempts may invalidate exam.';
+                        setTimeout(() => { if(warnDiv && !studentSubmissionRecorded) warnDiv.style.display = 'none'; }, 3000);
+                    }
+                }
+            });
+        }
+        if (watermarkDiv) {
+            const sessionId = generateWatermarkSessionId();
+            if(watermarkSessionSpan) watermarkSessionSpan.innerText = sessionId;
+            watermarkDiv.classList.add('active');
+        }
+    }
+    function disableExamProtectionFeatures() {
+        if (screenshotPreventionInstance) {
+            try { screenshotPreventionInstance.destroy(); } catch(e) {}
+            screenshotPreventionInstance = null;
+        }
+        if (watermarkDiv) watermarkDiv.classList.remove('active');
+    }
+    function showScreenshotToast() {
+        const existingToast = document.querySelector('.screenshot-warning-toast');
+        if(existingToast) existingToast.remove();
+        const toast = document.createElement('div');
+        toast.className = 'screenshot-warning-toast';
+        toast.innerText = '🚫 Screenshot / recording blocked by exam security policy.';
+        document.body.appendChild(toast);
+        setTimeout(() => { if(toast && toast.remove) toast.remove(); }, 2000);
+    }
+
+    function resetExamDueToCheat(reason) {
+        if (!examStarted || studentSubmissionRecorded) return;
+        const warningDiv = document.getElementById('cheatWarning');
+        if(warningDiv) {
+            warningDiv.style.display = 'block';
+            warningDiv.innerText = `⚠️ Exam reset due to: ${reason}. Page will reload in 2 seconds.`;
+        }
+        if(timerInterval) clearInterval(timerInterval);
+        examStarted = false;
+        disableExamProtectionFeatures();
+        setTimeout(() => { location.reload(); }, 2000);
+    }
+    function disableCopyPasteAndContext() {
+        document.addEventListener('copy', (e) => { if(examStarted && !studentSubmissionRecorded) { e.preventDefault(); resetExamDueToCheat('Copy attempt'); } });
+        document.addEventListener('cut', (e) => { if(examStarted && !studentSubmissionRecorded) { e.preventDefault(); resetExamDueToCheat('Cut attempt'); } });
+        document.addEventListener('paste', (e) => { if(examStarted && !studentSubmissionRecorded) { e.preventDefault(); resetExamDueToCheat('Paste attempt'); } });
+        document.addEventListener('contextmenu', (e) => { if(examStarted && !studentSubmissionRecorded) { e.preventDefault(); resetExamDueToCheat('Right-click'); } });
+        document.addEventListener('selectstart', (e) => { if(examStarted && !studentSubmissionRecorded) { e.preventDefault(); resetExamDueToCheat('Text selection'); } });
+        document.addEventListener('dragstart', (e) => { if(examStarted && !studentSubmissionRecorded) { e.preventDefault(); resetExamDueToCheat('Drag detected'); } });
+    }
+    function blockDevToolsAndShortcuts() {
+        window.addEventListener('keydown', (e) => {
+            if (!examStarted || studentSubmissionRecorded) return;
+            if (e.key === 'F12' || 
+                (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C' || e.key === 'K')) ||
+                (e.ctrlKey && e.key === 'u') ||
+                (e.ctrlKey && e.key === 's') ||
+                (e.ctrlKey && e.key === 'p') ||
+                (e.ctrlKey && e.key === 'a') ||
+                (e.ctrlKey && e.key === 'c') ||
+                (e.ctrlKey && e.key === 'x') ||
+                (e.metaKey && (e.key === 'c' || e.key === 'x' || e.key === 'v'))) {
+                e.preventDefault();
+                resetExamDueToCheat('Developer tools / shortcut');
+            }
+        });
+    }
+    function enforceWindowFocus() {
+        window.addEventListener('blur', () => { if (examStarted && !studentSubmissionRecorded) resetExamDueToCheat('Window lost focus'); });
+        document.addEventListener('visibilitychange', () => { if (document.hidden && examStarted && !studentSubmissionRecorded) resetExamDueToCheat('Tab switch'); });
+        window.addEventListener('pagehide', () => { if (examStarted && !studentSubmissionRecorded) resetExamDueToCheat('Page navigation'); });
+        window.addEventListener('beforeunload', (e) => {
+            if (examStarted && !studentSubmissionRecorded) {
+                e.preventDefault();
+                e.returnValue = 'Exam in progress. Leaving will reset progress.';
+                resetExamDueToCheat('Leave page');
+                return 'Exam in progress. Leaving will reset progress.';
+            }
+        });
+    }
+    function activateLockdown() {
+        disableCopyPasteAndContext();
+        blockDevToolsAndShortcuts();
+        enforceWindowFocus();
+        enableExamProtectionFeatures();
+    }
+
+    // Exam time helpers
+    function isExamWindowOpen() {
+        const now = new Date();
+        return (now >= FIXED_START && now <= FIXED_DEADLINE);
+    }
+    function computeInitialSeconds() {
+        const now = new Date();
+        const secondsUntilDeadline = Math.max(0, Math.floor((FIXED_DEADLINE - now) / 1000));
+        const durationSec = DURATION_MINUTES * 60;
+        return Math.min(durationSec, secondsUntilDeadline);
+    }
+
+    // Timer
+    function startTimer(seconds) {
+        if(timerInterval) clearInterval(timerInterval);
+        totalSecondsRemaining = seconds;
+        updateTimerDisplay();
+        timerInterval = setInterval(() => {
+            if (!examStarted) return;
+            if (totalSecondsRemaining <= 0) {
+                clearInterval(timerInterval);
+                lockAndSubmit();
+            } else {
+                totalSecondsRemaining--;
+                updateTimerDisplay();
+            }
+        }, 1000);
+    }
+    function updateTimerDisplay() { 
+        let m = Math.floor(totalSecondsRemaining/60), s = totalSecondsRemaining%60; 
+        timerEl.textContent = `${m<10?'0'+m:m}:${s<10?'0'+s:s}`; 
+    }
+    function lockAndSubmit() { if(examStarted && !studentSubmissionRecorded) submitAnswers(true); }
+
+    // ---------- SUBMIT FUNCTION (with Supabase integration) ----------
+    function submitAnswers(isTimeout) {
+        if(studentSubmissionRecorded) return;
+        clearInterval(timerInterval);
+        examStarted = false;
+        const name = document.getElementById('studentName').value.trim();
+        if(!name) { alert("Name required"); return; }
+        let correct = 0;
+        for(let i=1;i<=currentCorrectAnswers.length;i++) {
+            const sel = examForm.querySelector(`select[name="q${i}"]`);
+            if(sel && sel.value === currentCorrectAnswers[i-1]) correct++;
+        }
+        const percent = Math.round((correct/50)*100);
+        const passed = percent >= 60;
+        
+        // 1. Save locally (for export fallback)
+        addLocalSubmissionRecord(name, correct, 50, percent, passed);
+        
+        // 2. Save to Supabase cloud (non-blocking)
+        saveToSupabase(name, correct, 50, percent, passed);
+        
+        studentSubmissionRecorded = true;
+        const msgDiv = document.getElementById('submitMsg');
+        msgDiv.style.display='block';
+        // ✅ MODIFIED: display student name beside score
+        msgDiv.innerHTML = `✅ ${name} – Score: ${correct}/50 (${percent}%) — ${passed ? 'PASS' : 'FAIL'}. Cloud save initiated.`;
+        examForm.querySelectorAll('select, input, button[type="submit"]').forEach(el=>el.disabled=true);
+        disableExamProtectionFeatures();
+    }
+
+    // ---------- Build questions (50 identical to original) ----------
+    function buildQuestionsHTML() {
+        const part1 = [
+            { text: "Which Python data structure is most appropriate for ingesting, parsing, and mapping structured SIEM log entries based on key-value pairs?", opts: ["Tuple", "List", "Dictionary", "String"] },
+            { text: "In an RBAC model, access rights are often evaluated using Boolean logic. Which expression correctly represents a user being granted access ONLY if they are an admin OR if they are the owner of the file?", opts: ["is_admin AND is_owner", "is_admin OR is_owner", "NOT is_admin AND is_owner", "is_admin XOR is_owner"] },
+            { text: "When writing a Python script to serialize logs for SIEM ingestion, which library method correctly converts a Python dictionary into a well-formatted JSON string?", opts: ["json.parse()", "json.load()", "json.dumps()", "string.to_json()"] },
+            { text: "To comply with GDPR data masking rules, a script must obscure a 16-digit credit card string cc_num, leaving only the last 4 digits visible. Which Python string slicing logic achieves this?", opts: ["(\"*\" * 12) + cc_num[-4:]", "cc_num[0:12] + (\"*\" * 4)", "cc_num.replace(0, 12, \"*\")", "(\"*\" * 4) + cc_num[:12]"] },
+            { text: "In an authorization script for health records (HIPAA compliance), what logical condition must evaluate to True before access is granted to a patient's file?", opts: ["user.role == \"doctor\" OR user.id == file.patient_id", "user.role == \"doctor\" AND user.id != file.patient_id", "user.role == \"public\"", "user.role == \"admin\" AND NOT user.is_authenticated()"] },
+            { text: "Which hashing logic provides the strongest cryptographic integrity check to verify that a downloaded security patch has not been tampered with?", opts: ["MD5", "Base64 encoding", "SHA-256", "CRC32"] },
+            { text: "Ransomware relies on cryptographic algorithms. Which Python library and module would a security researcher use to simulate AES symmetric encryption?", opts: ["hashlib.sha256", "cryptography.fernet", "base64.b64encode", "math.crypt"] },
+            { text: "Which Python standard library module allows a security script to programmatically execute an external nmap system command and capture its output?", opts: ["os.sys", "requests", "subprocess", "socket"] },
+            { text: "A Python script parses network logs to detect unintentional Data Leaks. Which Regular Expression (Regex) pattern would successfully identify an exposed IPv4 address?", opts: ["^\\d{4}-\\d{2}-\\d{2}$", "\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b", "[A-Za-z0-9_]+@[A-Za-z0-9]+\\.[A-Za-z]+", "(?:[0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}"] },
+            { text: "In a Mobile Device Management (MDM) API script, which HTTP method is logically appropriate for pushing a new 'remote wipe' configuration to update a lost device's status?", opts: ["GET", "OPTIONS", "POST / PUT", "HEAD"] },
+            { text: "When writing Infrastructure as Code (IaC) to deploy a virtual machine in an IaaS environment, which file formats are standard for defining the configuration logic?", opts: ["HTML and CSS", "YAML and JSON", "XML and CSV", "EXE and DLL"] },
+            { text: "To logically enforce network segregation for Bring Your Own Device (BYOD) hardware, what parameter is typically altered via script on the network switch?", opts: ["The CPU clock speed", "The VLAN tag assignment", "The physical MAC address", "The BGP routing table"] },
+            { text: "Which programmatic check directly ensures the 'Integrity' component of the CIA triad during a database backup process?", opts: ["if backup.size > 0:", "if hash(original_db) == hash(backup_db):", "if current_time < backup_window:", "if user.password == input_password:"] },
+            { text: "In a Mandatory Access Control (MAC) algorithm, access is granted based on this logic: if user_clearance_level >= resource_classification_level. What type of logic is this?", opts: ["Fuzzy logic", "Boolean comparative logic", "Recursive logic", "Bitwise logic"] },
+            { text: "In asymmetric cryptography, if variable ciphertext = encrypt(message, public_key), what is the mathematically correct logic to reverse the process?", opts: ["decrypt(ciphertext, public_key)", "decrypt(ciphertext, private_key)", "decrypt(message, symmetric_key)", "encrypt(ciphertext, private_key)"] }
+        ];
+        const part2 = [
+            { text: "Review the RBAC condition below. What is the primary functional purpose of the first logical check?<br><code>if user.status != \"approved\": return \"Access Denied\"<br>if user.role == \"admin\": grant_full_access()</code>", opts: ["To automatically promote pending users.", "To act as a fail-safe guard clause, ensuring disabled/pending users cannot bypass role checks.", "To encrypt the user's password before checking roles.", "To delete unapproved users from the database."] },
+            { text: "Why is continuous log aggregation essential for logical event correlation in a SIEM?", opts: ["Because single logs lack context; correlation requires evaluating Time(Event A) - Time(Event B) < Threshold across multiple systems.", "Because logs must be deleted every 24 hours to save space.", "Because Python cannot parse single files.", "Because it stops users from forgetting passwords."] },
+            { text: "How does 'Zero Trust' architecture fundamentally alter network authorization logic?", opts: ["if user_ip in internal_network: grant_access()", "if user_authenticated_once: trust_forever()", "if verify_identity() AND verify_device() AND verify_context(): grant_access()", "if firewall_is_on: block_all_traffic()"] },
+            { text: "When handling an API request to delete user data (DPA compliance), why is a 'cascade' deletion logic necessary in a relational database?", opts: ["To ensure only the username is deleted, keeping the valuable data.", "To programmatically trace and delete the user's primary key along with all associated foreign key records in linked tables.", "To back up the data to a public server first.", "To randomize the user's password."] },
+            { text: "A cloud storage bucket policy is written in JSON. If the 'Effect': 'Allow' and 'Principal': '*' logic is applied without authentication conditions, what is the result?", opts: ["Secure, encrypted data at rest.", "An intentional denial of service (DoS).", "A compliance failure due to unintentional public data exposure.", "The bucket will automatically delete itself."] },
+            { text: "How does the Principle of Least Privilege translate into programming logic when establishing a database connection?", opts: ["db.connect(user=\"root\", password=\"*\", permissions=\"ALL\")", "db.connect(user=\"app_service\", permissions=[\"SELECT\", \"INSERT\"])", "db.connect(user=\"guest\", permissions=\"DROP_TABLE\")", "db.connect(bypass_auth=True)"] },
+            { text: "An automated vulnerability scanner evaluates CVSS scores. If the script logic is if cvss_score >= 9.0: trigger_alert(), what type of vulnerabilities is it prioritizing?", opts: ["Low-level informational bugs.", "Medium-severity UI glitches.", "Critical, easily exploitable vulnerabilities requiring immediate patching.", "Outdated SSL certificates only."] },
+            { text: "What logic flaw do Phishing attacks exploit to breach a system?", opts: ["Weak hash collisions in SHA-1.", "Buffer overflows in C++ memory management.", "The human element; bypassing technical logic by tricking authenticated users into executing malicious actions.", "Misconfigured BGP routing tables."] },
+            { text: "What is the functional difference in execution between a Vulnerability Scan script and a Penetration Testing framework like Metasploit?", opts: ["A scan script reads versions and matches them against a database; a pen-test framework executes active payload logic to gain a shell.", "Scans are written in Python; pen-tests are written in HTML.", "Scans only check hardware; pen-tests check APIs.", "There is no logical difference."] },
+            { text: "A script handles customer data for an online retail app. Which logic best protects data at rest in the cloud database?", opts: ["db.store(base64.encode(data))", "db.store(encrypt_AES(data, KMS_key))", "db.store(hash(data))", "db.store(data.to_uppercase())"] },
+            { text: "Why is Token-Based Authentication (like JWT) logically superior to session IDs for mobile device API access?", opts: ["Tokens require an active cell signal to work.", "Tokens are stateful and require heavy server memory.", "Tokens are stateless, cryptographically signed, and can carry expiration logic (exp), making them secure for frequently disconnecting mobile clients.", "Tokens cannot be encrypted."] },
+            { text: "In a shared responsibility matrix, what logic dictates the customer's responsibility in a SaaS (Software as a Service) environment?", opts: ["Customer manages infrastructure; Provider manages data.", "Customer manages data and user access logic; Provider manages application layer and underlying infrastructure.", "Provider manages user passwords; Customer manages server hardware.", "Customer manages OS patches; Provider manages UI colors."] },
+            { text: "Multi-Factor Authentication (MFA) relies on compound Boolean logic. Which logical gate accurately represents MFA validation?", opts: ["valid_password OR valid_otp_token", "valid_password AND valid_otp_token", "NOT valid_password AND valid_otp_token", "valid_password XOR valid_otp_token"] },
+            { text: "During a TLS handshake, what cryptographic logic allows the client and server to establish a secure connection?", opts: ["Asymmetric encryption is used to securely exchange a symmetric session key, which is then used for faster data transfer.", "They use symmetric encryption to exchange an asymmetric key.", "They rely entirely on MD5 hashing for the whole session.", "They send the private keys to each other in plain text."] },
+            { text: "A piece of malware logic copies itself into the System32 directory and appends its execution path to the Windows Registry Run key. What is the functional goal of this logic?", opts: ["To compress the hard drive.", "To establish persistence across system reboots.", "To optimize registry performance.", "To clean up temporary files."] }
+        ];
+        const part3 = [
+            { text: "Analyze the following Brute-Force detection logic intended for a SIEM monitor. What is the critical logical flaw?<br><code>failed_attempts = 0<br>while failed_attempts < 3:<br>    password = input(\"Enter password: \")<br>    if password == correct_password:<br>        print(\"Access Granted\")<br>        break<br>    else:<br>        print(\"Access Denied\")<br>        # Missing code line here</code>", opts: ["The break statement will crash the program.", "The failed_attempts variable is never incremented (e.g., failed_attempts += 1), resulting in an infinite loop.", "You cannot use a while loop for password checking in Python.", "failed_attempts must be a string."] },
+            { text: "Evaluate this Python RBAC script. If current_role = 'manager', what will this function output when checking for the 'admin' permission?<br><code>role_hierarchy = {<br>    \"admin\": [\"admin\",\"manager\",\"user\"],<br>    \"manager\": [\"manager\",\"user\"],<br>    \"user\": [\"user\"]<br>}<br>def has_permission(current_role, required_role):<br>    return required_role in role_hierarchy[current_role]<br>has_permission(\"manager\", \"admin\")</code>", opts: ["True, because a manager is structurally close to an admin.", "False, because 'admin' is not a string in the list mapped to the 'manager' key.", "A KeyError, because the syntax is invalid.", "True, because the dictionary contains 'admin'."] },
+            { text: "An application uses the following logic to sanitize user input: query = 'SELECT * FROM users WHERE username = ''' + user_input + ''''. What vulnerability does this string concatenation logic introduce?", opts: ["Cross-Site Scripting (XSS)", "SQL Injection (SQLi)", "Buffer Overflow", "Directory Traversal"] },
+            { text: "Analyze the logic of HIPAA vs. GDPR compliance. If a logical filter was written to classify data, which data attribute would flag a record for HIPAA, but NOT necessarily for GDPR?", opts: ["Email address", "IP Address", "Blood type and diagnosis codes", "Home address"] },
+            { text: "A Python parser reads an Nmap XML output. It finds an open port 80 but the service.version variable returns None. How should this logical None state be analyzed?", opts: ["The port is guaranteed to be secure.", "The scanner successfully detected the port state but failed to enumerate the service fingerprint.", "The script crashed and must be rewritten in C++.", "The server is running a honeypot."] },
+            { text: "Analyze the spread logic of a worm like WannaCry. Which algorithmic capability allows a worm to differentiate itself from a standard Trojan?", opts: ["if user_clicks_file(): execute_payload()", "while true: scan_network_for_vuln_SMB() -> exploit() -> propagate()", "if date == Friday: delete_files()", "if check_keyboard(): log_keystrokes()"] },
+            { text: "If an MDM policy script evaluates if device.os_version < required_version:, what is the most secure operational outcome to execute if the condition is True?", opts: ["grant_full_access()", "restrict_network_access_and_prompt_update()", "format_hard_drive()", "ignore_and_log()"] },
+            { text: "Analyze API permissions in a Cloud environment. If an IAM role JSON policy specifies 'Action': ['s3:GetObject'], what operation will functionally fail?", opts: ["Reading a file from the bucket.", "Downloading a file from the bucket.", "Uploading a new file (s3:PutObject) to the bucket.", "Viewing the bucket's contents."] },
+            { text: "In RSA asymmetric encryption logic, the security relies on the mathematical difficulty of which operation?", opts: ["Reversing MD5 hashes.", "Factoring the product of two very large prime numbers.", "Adding two binary strings together.", "Calculating the square root of a floating-point number."] },
+            { text: "Consider the following Python code snippet from an RBAC system. What is the output if username = 'charlie', but 'charlie' does not exist in the users dictionary?<br><code>def get_user_role(username):<br>    user = users.get(username)<br>    if user and user.get(\"status\") == \"approved\":<br>        return user[\"role\"]<br>    return \"Guest\"</code>", opts: ["None", "KeyError", "\"Guest\"", "SyntaxError"] }
+        ];
+        const part4 = [
+            { text: "You are tasked with structuring a failed login attempt into JSON format for a SIEM. Which Python script executes this correctly?", opts: ["import json; log = {'event': 'fail', 'user': 'admin'}; print(json.dumps(log))", "log = ['event': 'fail', 'user': 'admin']; print(log.to_json())", "import siem; print(siem.make_json('fail', 'admin'))", "log = 'event=fail, user=admin'; print(json.parse(log))"] },
+            { text: "In a Python security script, you need to append a new alert to siem_alerts.log without overwriting older data. Which file I/O logic is correct?", opts: ["with open('siem_alerts.log', 'w') as file:", "with open('siem_alerts.log', 'r') as file:", "with open('siem_alerts.log', 'a') as file:", "with open('siem_alerts.log', 'x') as file:"] },
+            { text: "Apply GDPR pseudonymization logic using Python. Which approach properly replaces a direct identifier with a reversible pseudonymous token?", opts: ["db.insert(user.name)", "token = encrypt(user.name, key); db.insert(token)", "token = hash(user.name); db.insert(token)", "db.insert('User_1')"] },
+            { text: "You are writing an automated incident response script. If a brute-force attack is detected from ip_address, which OS-level command should your script pass to subprocess.run() to block the attacker on a Linux firewall?", opts: ["iptables -A INPUT -s {ip_address} -j DROP", "ping -c 4 {ip_address}", "chmod 777 {ip_address}", "nmap -p- {ip_address}"] },
+            { text: "During a penetration test, you extract the following string from a database: admin:5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8. What tool or logic must you apply next to test the password strength?", opts: ["A Disassembler (like Ghidra)", "A Hash Cracker (like Hashcat or John the Ripper) using a dictionary attack.", "A packet sniffer (like Wireshark).", "A symmetric decryption algorithm using a public key."] },
+            { text: "How would you programmatically implement a mitigation strategy against 'Credential Stuffing' API attacks?", opts: ["if len(password) < 8: reject()", "if login_attempts_from_IP(request.ip) > 5_per_minute: apply_rate_limit(request.ip)", "if password == old_password: reject()", "if request.headers == None: accept()"] },
+            { text: "Write the logical sequence of an API call to an MDM server to wipe a lost device with ID 1044.", opts: ["GET /api/devices/1044/location", "POST /api/devices/1044/wipe with payload {'auth_token': 'admin_key', 'confirm': true}", "DELETE /api/devices/", "PUT /api/users/1044/password"] },
+            { text: "Implement a Cloud Security check using the AWS boto3 library in Python. To verify if an S3 bucket is public, which logical check must your script perform?", opts: ["bucket.get_encryption_keys()", "bucket.get_public_access_block() and evaluate if BlockPublicPolicy is True.", "bucket.list_objects() and count the files.", "bucket.delete()"] },
+            { text: "Synthesize an anti-phishing logic script that parses incoming emails. Which Regex application is most effective at spotting homograph domains (e.g., g00gle.com)?", opts: ["Searching for multiple @ symbols in the body.", "Calculating the Levenshtein distance between the email's sender domain and your company's official domain to flag anomalies.", "Searching for the word 'Urgent' in the subject line.", "Checking if the email contains an attachment."] },
+            { text: "You are developing an automated Identity Governance audit script. To comply with security policies, what logic should be applied to dormant accounts?", opts: ["if (current_date - user.last_login).days > 30: user.status = 'disabled'", "if user.login_count < 10: user.status = 'admin'", "if (current_date - user.created_date).days > 30: user.password = '123456'", "if user.last_login == None: pass"] }
+        ];
+        const allParts = [...part1, ...part2, ...part3, ...part4];
+        let html = '';
+        for (let i = 0; i < allParts.length; i++) {
+            const q = allParts[i];
+            const partLabel = i < 15 ? 'REMEMBERING' : (i < 30 ? 'UNDERSTANDING' : (i < 40 ? 'ANALYZING' : 'APPLYING'));
+            html += `<div class="question" data-qid="${i+1}">
+                        <div class="qcase">📌 Question ${i+1} <span class="badge-part">${partLabel}</span></div>
+                        <label>${q.text}</label>
+                        <select name="temp">
+                            <option value="">-- Select Answer --</option>
+                            <option value="A">A. ${q.opts[0]}</option>
+                            <option value="B">B. ${q.opts[1]}</option>
+                            <option value="C">C. ${q.opts[2]}</option>
+                            <option value="D">D. ${q.opts[3]}</option>
+                        </select>
+                    </div>`;
+        }
+        return html;
+    }
+
+    function shuffleArray(arr) { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random()*(i+1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; }
+    function randomizeQuestionsAndOptions() {
+        const blocks = Array.from(questionsContainer.querySelectorAll('.question'));
+        const shuffledBlocks = shuffleArray(blocks);
+        const newCorrect = [];
+        const originalCorrect = ["C","B","C","A","A","C","B","C","B","C","B","B","B","B","B","B","A","C","B","C","B","C","C","A","B","C","B","B","A","B","B","B","B","C","B","B","B","C","B","C","A","C","B","A","B","B","B","B","B","A"];
+        questionsContainer.innerHTML = '';
+        shuffledBlocks.forEach((block, idx) => {
+            const qid = parseInt(block.getAttribute('data-qid'), 10);
+            newCorrect[idx] = originalCorrect[qid-1];
+            const select = block.querySelector('select');
+            if (select) {
+                const placeholder = Array.from(select.options).find(o => o.value === "");
+                const opts = Array.from(select.options).filter(o => o.value !== "");
+                shuffleArray(opts);
+                select.innerHTML = "";
+                if (placeholder) select.appendChild(placeholder);
+                opts.forEach(opt => select.appendChild(opt));
+                select.name = `q${idx+1}`;
+            }
+            questionsContainer.appendChild(block);
+        });
+        currentCorrectAnswers = newCorrect;
+    }
+
+    // Export (local only)
+    simpleExportBtn.addEventListener('click', () => {
+        const pwd = prompt("🔐 Instructor Master Password for local export:");
+        if(pwd !== MASTER_EXPORT_PASSWORD) { alert("Wrong password."); return; }
+        const subs = loadAllSubmissions();
+        if(!subs.length) { alert("No local submissions yet."); return; }
+        const sorted = [...subs].sort((a,b)=>a.studentName.localeCompare(b.studentName));
+        const rows = [["LOCAL REPORT - ALL STUDENT RECORDS"], [], ["Student Name", "Raw Score", "Total", "Percentage", "Result", "Timestamp"]];
+        sorted.forEach(s=>rows.push([s.studentName, s.rawScore, s.totalQuestions, `${s.percent}%`, s.passed?"PASS":"FAIL", s.timestamp]));
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        ws['!cols'] = [{wch:28},{wch:10},{wch:8},{wch:12},{wch:10},{wch:22}];
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "All_Students_Alphabetical");
+        XLSX.writeFile(wb, `Local_CyberExam_${new Date().toISOString().slice(0,19)}.xlsx`);
+    });
+
+    // Start exam
+    examCodeBtn.addEventListener('click', () => {
+        if(examCodeInput.value.trim() !== ACCESS_CODE) {
+            codeError.style.display = 'block'; codeError.innerText = '❌ Invalid access code.';
+            return;
+        }
+        if(!isExamWindowOpen()) {
+            codeError.style.display = 'block'; codeError.innerText = '⛔ Exam is not available now. The exam window is May 21, 2026 9:00 AM – 10:00 AM.';
+            return;
+        }
+        codeError.style.display = 'none';
+        accessSection.style.display = 'none';
+        examForm.style.display = 'block';
+        examStarted = true;
+        studentSubmissionRecorded = false;
+        randomizeQuestionsAndOptions();
+        const initialSecs = computeInitialSeconds();
+        if(initialSecs <= 0) { alert("Exam deadline has passed or duration zero. Cannot start."); location.reload(); return; }
+        startTimer(initialSecs);
+        activateLockdown();
+    });
+
+    examForm.addEventListener('submit', (e)=>{ e.preventDefault(); if(!studentSubmissionRecorded) submitAnswers(false); });
+    questionsContainer.innerHTML = buildQuestionsHTML();
+    updateSubmissionCounter();
+})();
+</script>
+
+    </body>
+</html>
